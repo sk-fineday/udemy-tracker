@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
+<title>Udemy 学習トラッカー</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --success: #16a34a;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --warning: #f59e0b;
+  --rest: #fbbf24;
+  --today: #fef3c7;
+  --done-bg: #dcfce7;
+  --error-bg: #fee2e2;
+  --error-text: #991b1b;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  padding: 12px;
+  max-width: 920px;
+  margin: 0 auto;
+  -webkit-text-size-adjust: 100%;
+}
+h1 { font-size: 1.3rem; margin: 0; }
+h2 { font-size: 1.05rem; margin: 0 0 12px; }
+button {
+  font: inherit;
+  font-size: 14px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  transition: background 0.15s;
+}
+button:hover:not(:disabled) { background: var(--primary-dark); }
+button:active:not(:disabled) { opacity: 0.9; }
+button.secondary {
+  background: white;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+button.secondary:hover:not(:disabled) { background: #eff6ff; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+input, textarea, select {
+  font: inherit;
+  font-size: 16px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 44px;
+  background: white;
+  color: var(--text);
+}
+textarea { font-size: 14px; }
+.hidden { display: none !important; }
+
+.banner {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+.banner-warn { background: var(--warning); color: white; }
+.banner-error { background: var(--error-bg); color: var(--error-text); border: 1px solid #fca5a5; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 4px 0;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 600px) {
+  .dashboard-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.stat {
+  text-align: center;
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: bold;
+  color: var(--primary);
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--success);
+  transition: width 0.4s;
+}
+
+.today-card {
+  background: var(--today);
+  border: 2px solid var(--warning);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.today-label {
+  display: inline-block;
+  background: var(--warning);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.today-meta { font-size: 13px; color: #92400e; margin-bottom: 6px; }
+.today-task { font-weight: bold; margin-bottom: 8px; word-break: break-word; }
+.today-mins { font-size: 13px; color: #78350f; }
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 12px;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.week-info { flex: 1; text-align: center; min-width: 0; }
+.week-info .label { font-weight: bold; font-size: 15px; }
+.week-info .theme {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+.day-card.done { background: var(--done-bg); border-color: var(--success); }
+.day-card.rest { background: #fff7ed; border-color: var(--rest); }
+.day-card.today { border-color: var(--warning); border-width: 2px; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.day-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.day-mins {
+  font-size: 12px;
+  background: var(--border);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.day-card.done .day-mins { background: var(--success); color: white; }
+.day-card.rest .day-mins { background: var(--rest); color: white; }
+.day-task {
+  margin-bottom: 10px;
+  word-break: break-word;
+  font-size: 14px;
+}
+.day-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.note-input {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 56px;
+  resize: vertical;
+}
+
+.setup, .signin {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px 20px;
+  max-width: 480px;
+  margin: 24px auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.setup h2, .signin h2 { font-size: 1.2rem; margin-bottom: 12px; }
+.setup p, .signin p { color: var(--text-muted); font-size: 14px; margin: 0 0 16px; }
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.help {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.button-row button { flex: 1; }
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="offline-banner" class="banner banner-warn hidden">⚠ オフライン中（変更はローカルに保存され、再接続時に同期されます）</div>
+  <div id="error-banner" class="banner banner-error hidden"></div>
+
+  <div id="setup-screen" class="hidden">
+    <div class="setup">
+      <h2>初回セットアップ</h2>
+      <p>Google APIの設定を入力してください。手順は同梱の README.txt を参照してください。</p>
+      <div class="field">
+        <label for="setup-client-id">Google OAuth クライアントID</label>
+        <input id="setup-client-id" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="setup-sheet-id">スプレッドシートID</label>
+        <input id="setup-sheet-id" type="text" placeholder="シートURLの /d/ と /edit の間の文字列" autocomplete="off">
+        <div class="help">例: https://docs.google.com/spreadsheets/d/【ここ】/edit</div>
+      </div>
+      <div class="field">
+        <label for="setup-start-date">学習開始日</label>
+        <input id="setup-start-date" type="date">
+      </div>
+      <div class="button-row">
+        <button id="setup-save">設定を保存して開始</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-screen" class="loading hidden">
+    <div class="spinner"></div>
+    <div id="loading-text">読み込み中...</div>
+  </div>
+
+  <div id="signin-screen" class="hidden">
+    <div class="signin">
+      <h2>Googleアカウントでサインイン</h2>
+      <p>進捗データをGoogle Sheetsで読み書きするためにサインインが必要です。初回はテストアプリの確認画面で「続行」をタップしてください。</p>
+      <div class="button-row">
+        <button id="signin-btn">Googleでサインイン</button>
+      </div>
+      <div class="button-row" style="margin-top:8px">
+        <button class="secondary" id="signin-reset-btn">設定をリセット</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-app" class="hidden">
+    <div class="header">
+      <h1>📚 Udemy 学習トラッカー</h1>
+      <div class="header-actions">
+        <button class="secondary" id="sync-btn" title="再同期">↻ 同期</button>
+        <button class="secondary" id="reset-btn">設定リセット</button>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <h2>進捗ダッシュボード</h2>
+      <div class="dashboard-grid">
+        <div class="stat">
+          <div class="stat-value" id="stat-done">0 / 0</div>
+          <div class="stat-label">完了 / 全学習日</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-percent">0%</div>
+          <div class="stat-label">全体進捗</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-streak">0</div>
+          <div class="stat-label">連続学習日数</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-time">0h 0m</div>
+          <div class="stat-label">累計学習時間</div>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div id="today-container"></div>
+
+    <div class="week-nav">
+      <button id="prev-week" aria-label="前の週">←</button>
+      <div class="week-info">
+        <div class="label" id="week-label">Week 1</div>
+        <div class="theme" id="week-theme"></div>
+      </div>
+      <button id="next-week" aria-label="次の週">→</button>
+    </div>
+
+    <div id="day-cards"></div>
+
+    <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0">
+      Udemy Web Developer Bootcamp 学習トラッカー
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+"use strict";
+
+// =====================================================
+// タスクデータ（14週分）
+// =====================================================
+const WEEKS = [
+  {label:"Week 1", theme:"HTML完成 ＋ CSS入門〜セレクタ", days:[
+    {task:"#39〜41 テーブルtr/td/th・thead/tfoot・colspan", mins:23, rest:false},
+    {task:"#42〜44 フォーム要素・inputの種類・ラベル", mins:26, rest:false},
+    {task:"#45〜48 ボタン・name属性・ラジオ/チェック/セレクト", mins:34, rest:false},
+    {task:"#49〜52 range/textarea・バリデーション・登録フォーム演習", mins:39, rest:false},
+    {task:"#53〜59 CSS入門・color・rgbと16進数", mins:43, rest:false},
+    {task:"#60〜63 セミコロン・テキスト・フォントサイズ・font-family", mins:24, rest:false},
+    {task:"休憩・今週の復習", mins:0, rest:true},
+  ]},
+  {label:"Week 2", theme:"CSSセレクタ ＋ ボックスモデル ＋ その他CSS", days:[
+    {task:"#64〜68 CSSセレクタ（要素・ID・クラス・子孫）", mins:27, rest:false},
+    {task:"#69〜72 隣接・属性・疑似クラス・疑似要素", mins:25, rest:false},
+    {task:"#73〜77 カスケード・詳細度・継承", mins:30, rest:false},
+    {task:"#78〜82 ボックスモデル(width/height/border/padding/margin)", mins:41, rest:false},
+    {task:"#83〜86 displayプロパティ・em・rem", mins:41, rest:false},
+    {task:"#87〜91 不透明度・position・トランジション・トランスフォーム", mins:53, rest:false},
+    {task:"#92〜96 おしゃれボタン・background・GoogleFonts・ポートフォリオPart1/2", mins:48, rest:false},
+  ]},
+  {label:"Week 3", theme:"Flexbox ＋ Bootstrap ＋ プロジェクト", days:[
+    {task:"#97〜101 Flexbox基礎(flex-direction・justify-content・flex-wrap)", mins:23, rest:false},
+    {task:"#102〜105 align-items・align-content・flex-basis/grow/shrink・省略記法", mins:34, rest:false},
+    {task:"#106〜108 レスポンシブ・メディアクエリ・レスポンシブナビバー", mins:30, rest:false},
+    {task:"#109〜114 価格表パネルプロジェクト(全6回)", mins:27, rest:false},
+    {task:"#115〜120 Bootstrap入門・コンテナ・ボタン・タイポグラフィ・バッジ", mins:52, rest:false},
+    {task:"#121〜125 グリッドシステム・レスポンシブグリッド・フォーム・ナビバー", mins:66, rest:false},
+    {task:"#126〜133 Bootstrap Icon・その他 ＋ Museum of Candyプロジェクト", mins:56, rest:false},
+  ]},
+  {label:"Week 4", theme:"JavaScript基礎〜配列・オブジェクト", days:[
+    {task:"#134〜139 JS入門・プリミティブ型・Number・NaN", mins:28, rest:false},
+    {task:"#140〜144 変数とlet・const・var・Boolean・命名規則", mins:20, rest:false},
+    {task:"#145〜152 String・インデックス・メソッド・テンプレートリテラル・Math", mins:47, rest:false},
+    {task:"#153〜159 条件文・比較演算子・===・console/alert・if文", mins:34, rest:false},
+    {task:"#160〜167 else-if・else・ネスト・Truthy/Falsy・AND/OR/NOT・switch", mins:55, rest:false},
+    {task:"#168〜177 配列入門・アクセス・push/pop・shift/unshift・concat/slice", mins:55, rest:false},
+    {task:"休憩・今週の復習・演習問題の見直し", mins:0, rest:true},
+  ]},
+  {label:"Week 5", theme:"JavaScript オブジェクト〜関数〜モダンJS", days:[
+    {task:"#178〜183 オブジェクトリテラル・アクセス・更新・配列とオブジェクト", mins:26, rest:false},
+    {task:"#184〜191 for文・配列のループ・ネスト・while・break", mins:43, rest:false},
+    {task:"#192〜196 クイズゲーム・for...of・オブジェクトイテレート・Todoアプリ", mins:53, rest:false},
+    {task:"#197〜202 関数入門・引数・複数引数・return(演習6問含む)", mins:36, rest:false},
+    {task:"#203〜212 スコープ・ブロックスコープ・レキシカル・高階関数・this・try/catch", mins:66, rest:false},
+    {task:"#213〜224 forEach・map・アロー関数・filter・some/every・reduce", mins:66, rest:false},
+    {task:"#225〜233 デフォルト引数・スプレッド・レスト・分割代入", mins:47, rest:false},
+  ]},
+  {label:"Week 6", theme:"DOM操作 ＋ イベント ＋ 非同期JS", days:[
+    {task:"#234〜239 DOM入門・document・getElementById・querySelector", mins:38, rest:false},
+    {task:"#240〜245 innerHTML・属性・スタイル・classList・親子兄弟・append", mins:48, rest:false},
+    {task:"#246〜247 removeChild・ポケモン図鑑デモ", mins:16, rest:false},
+    {task:"#248〜255 イベント入門・インライン・onclick・addEventListener・キーボード", mins:58, rest:false},
+    {task:"#256〜259 フォームイベント・preventDefault・inputイベント・バブリング・デリゲーション", mins:45, rest:false},
+    {task:"#260〜263 卓球得点表プロジェクト(全4回)", mins:53, rest:false},
+    {task:"休憩・DOM/イベントの復習", mins:0, rest:true},
+  ]},
+  {label:"Week 7", theme:"非同期JS ＋ AJAX/API ＋ OOP", days:[
+    {task:"#264〜268 コールスタック・シングルスレッド・コールバック地獄・ダミーリクエスト", mins:52, rest:false},
+    {task:"#269〜274 Promise・Promiseの力・自作Promise・async・await・エラー", mins:57, rest:false},
+    {task:"#275〜283 AJAX入門・API・JSON・Hoppscotch・HTTPメソッド・ステータス・クエリ・ヘッダー", mins:57, rest:false},
+    {task:"#284〜289 XHR・fetch・Axios・AxiosでHTTPヘッダー・テレビ番組検索アプリ", mins:55, rest:false},
+    {task:"#290〜297 プロトタイプ・OOP・ファクトリ・コンストラクタ・クラス・extends", mins:71, rest:false},
+    {task:"#298〜309 ターミナル(ls・pwd・cd・mkdir・man・touch・rm)", mins:55, rest:false},
+    {task:"休憩・非同期/APIの復習", mins:0, rest:true},
+  ]},
+  {label:"Week 8", theme:"Node.js ＋ Express ＋ テンプレート", days:[
+    {task:"#310〜318 Node.js入門・REPL・ファイル実行・process・fsモジュール", mins:53, rest:false},
+    {task:"#319〜328 module.exports・npm・パッケージ・package.json・言語識別アプリ", mins:65, rest:false},
+    {task:"#329〜337 Express入門・はじめてのアプリ・ルーティング・パスパラメータ・クエリ", mins:58, rest:false},
+    {task:"#338〜344 EJSテンプレート入門・構文・データを渡す・subredditデモ", mins:35, rest:false},
+    {task:"#345〜350 EJSで条件文・ループ・静的ファイル・Bootstrap・パーシャル", mins:55, rest:false},
+    {task:"#351〜358 REST入門・GETとPOST・POSTルーティング・ボディパース・RESTfulコメント", mins:60, rest:false},
+    {task:"休憩・ExpressとEJSの復習", mins:0, rest:true},
+  ]},
+  {label:"Week 9", theme:"MongoDB ＋ Mongoose ＋ Express連携", days:[
+    {task:"#359〜364 Expressリダイレクト・コメント詳細/更新/削除・UUID・メソッドオーバーライド", mins:57, rest:false},
+    {task:"#365〜372 MongoDB入門・SQL/NoSQL・インストール・シェル・BSON", mins:37, rest:false},
+    {task:"#373〜377 MongoDBでCRUD(挿入・検索・更新・削除・演算子)", mins:47, rest:false},
+    {task:"#378〜387 Mongoose基礎(接続・モデル・複数挿入・検索・更新・削除)", mins:45, rest:false},
+    {task:"#388〜395 Mongooseバリデーション・制約・インスタンスメソッド・static・virtual・ミドルウェア", mins:64, rest:false},
+    {task:"#396〜405 MongooseとExpress連携(商品CRUD・カテゴリ・削除)", mins:70, rest:false},
+    {task:"休憩・MongoDB/Mongooseの復習", mins:0, rest:true},
+  ]},
+  {label:"Week 10", theme:"YelpCamp(CRUD〜スタイル〜エラー処理)", days:[
+    {task:"#406〜416 YelpCamp概要・基本Express・モデル・シード・CRUD", mins:57, rest:false},
+    {task:"#417〜424 Expressミドルウェア(morgan・自作・404・パスワードミドルウェア)", mins:47, rest:false},
+    {task:"#425〜434 YelpCamp: ejsレイアウト・Bootstrap・ナビバー・フッター・スタイル", mins:50, rest:false},
+    {task:"#435〜442 Expressエラーハンドリング(カスタムエラー・asyncエラー・Mongooseエラー)", mins:62, rest:false},
+    {task:"#443〜450 YelpCamp: バリデーション・ExpressError・JOIスキーマ", mins:57, rest:false},
+    {task:"#451〜459 MongoDBリレーション(1対数個・populate・1対超たくさん・スキーマ設計)", mins:73, rest:false},
+    {task:"休憩・YelpCamp前半の復習", mins:0, rest:true},
+  ]},
+  {label:"Week 11", theme:"YelpCamp(認証〜セキュリティ〜デプロイ)", days:[
+    {task:"#460〜466 ExpressでMongoDBリレーション(農場・商品・削除ミドルウェア)", mins:56, rest:false},
+    {task:"#467〜474 YelpCamp: レビューモデル・フォーム・登録・バリデーション・削除", mins:50, rest:false},
+    {task:"#475〜482 ルーター・クッキー・cookie-parser・署名付きクッキー", mins:54, rest:false},
+    {task:"#483〜495 セッション・フラッシュ・YelpCampリファクタ・フラッシュパーシャル", mins:63, rest:false},
+    {task:"#496〜508 ゼロから認証(bcrypt・ハッシュ・ソルト・登録/ログイン/ログアウト)", mins:89, rest:false},
+    {task:"#509〜526 YelpCamp: Passport認証・ユーザー登録・ログイン・認可", mins:82, rest:false},
+    {task:"休憩・認証/認可の復習", mins:0, rest:true},
+  ]},
+  {label:"Week 12", theme:"YelpCamp仕上げ ＋ React入門", days:[
+    {task:"#527〜531 コントローラー・ルーティングリファクタ・星評価", mins:33, rest:false},
+    {task:"#532〜546 画像アップロード(multer・Cloudinary・カルーセル・削除・thumbnail)", mins:84, rest:false},
+    {task:"#547〜561 地図の追加・ジオコーディング・クラスターマップ", mins:91, rest:false},
+    {task:"#562〜575 スタイル仕上げ・セキュリティ(XSS・helmet・CSP・MongoDBインジェクション)", mins:74, rest:false},
+    {task:"#576〜583 デプロイ(MongoAtlas・セッションストア・Heroku)", mins:48, rest:false},
+    {task:"#584〜598 React入門(JSX・コンポーネント・import/export・スタイル)", mins:53, rest:false},
+    {task:"休憩・YelpCamp完成を祝う！", mins:0, rest:true},
+  ]},
+  {label:"Week 13", theme:"React(Props〜State〜Form〜useEffect)", days:[
+    {task:"#599〜610 Vite・Props・デフォルト値・条件分岐・配列レンダリング", mins:62, rest:false},
+    {task:"#611〜616 買い物リスト・key Props・ESLint・PropTypes", mins:43, rest:false},
+    {task:"#617〜627 イベント処理・State入門・useState・Toggler・複数State", mins:43, rest:false},
+    {task:"#628〜637 Stateを関数で更新・Object/配列のState・UUIDで削除・更新パターン", mins:72, rest:false},
+    {task:"#638〜645 コンポーネント設計・Lucky7・Stateをpropsに渡す・関数をpropsに渡す", mins:68, rest:false},
+    {task:"#646〜655 ReactでForm(制御コンポーネント・複数input・バリデーション・React Hook Form)", mins:77, rest:false},
+    {task:"休憩・Reactの復習", mins:0, rest:true},
+  ]},
+  {label:"Week 14", theme:"React(useEffect〜Material UI〜Todoアプリ)", days:[
+    {task:"#656〜661 useEffect・依存配列・APIからデータ取得・Loader・GitHub検索", mins:36, rest:false},
+    {task:"#662〜666 Material UI(インストール・Rating・フォーム・SXプロパティ)", mins:34, rest:false},
+    {task:"#667〜674 TodoアプリMUI版(セットアップ・削除・トグル・新規登録・LocalStorage)", mins:48, rest:false},
+    {task:"#675〜676 おまけTodoアプリ ＋ 次のステップへ", mins:17, rest:false},
+    {task:"全体復習：HTML/CSS/JS/Node/Express/MongoDBの要点整理", mins:60, rest:false},
+    {task:"全体復習：YelpCamp・React・デプロイの振り返り", mins:60, rest:false},
+    {task:"コース修了 & 今後の学習計画を立てよう！", mins:0, rest:true},
+  ]},
+];
+
+// =====================================================
+// 定数
+// =====================================================
+const SK = {
+  CLIENT_ID: 'udemy_tracker_client_id',
+  SPREADSHEET_ID: 'udemy_tracker_spreadsheet_id',
+  START_DATE: 'udemy_tracker_start_date',
+  PROGRESS_CACHE: 'udemy_tracker_progress',
+  PENDING: 'udemy_tracker_pending',
+  CURRENT_WEEK: 'udemy_tracker_current_week',
+};
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+// =====================================================
+// 状態
+// =====================================================
+const state = {
+  clientId: null,
+  spreadsheetId: null,
+  startDate: null,
+  progress: {},
+  currentWeek: 0,
+  token: null,
+  tokenExpiresAt: 0,
+  tokenClient: null,
+  tokenResolvers: [],
+  online: navigator.onLine,
+  pending: [],
+};
+
+// =====================================================
+// ユーティリティ
+// =====================================================
+const $ = (sel) => document.querySelector(sel);
+
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function fmtDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  const wd = ['日','月','火','水','木','金','土'][date.getDay()];
+  return `${y}/${m}/${d}(${wd})`;
+}
+function todayDate() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showError(msg) {
+  const el = $('#error-banner');
+  el.textContent = '⚠ ' + msg;
+  el.classList.remove('hidden');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.add('hidden'), 6000);
+}
+
+// =====================================================
+// 設定（localStorage）
+// =====================================================
+function loadSettings() {
+  state.clientId = localStorage.getItem(SK.CLIENT_ID);
+  state.spreadsheetId = localStorage.getItem(SK.SPREADSHEET_ID);
+  state.startDate = localStorage.getItem(SK.START_DATE);
+  state.currentWeek = parseInt(localStorage.getItem(SK.CURRENT_WEEK) || '0', 10) || 0;
+  try { state.progress = JSON.parse(localStorage.getItem(SK.PROGRESS_CACHE) || '{}'); }
+  catch { state.progress = {}; }
+  try { state.pending = JSON.parse(localStorage.getItem(SK.PENDING) || '[]'); }
+  catch { state.pending = []; }
+}
+function saveSettings() {
+  localStorage.setItem(SK.CLIENT_ID, state.clientId || '');
+  localStorage.setItem(SK.SPREADSHEET_ID, state.spreadsheetId || '');
+  localStorage.setItem(SK.START_DATE, state.startDate || '');
+  localStorage.setItem(SK.CURRENT_WEEK, String(state.currentWeek));
+}
+function saveCache() {
+  localStorage.setItem(SK.PROGRESS_CACHE, JSON.stringify(state.progress));
+  localStorage.setItem(SK.PENDING, JSON.stringify(state.pending));
+}
+function resetSettings() {
+  if (!confirm('設定とローカルキャッシュをすべて消去します。よろしいですか？\n（Sheets上のデータは消えません）')) return;
+  Object.values(SK).forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
+// =====================================================
+// タスク関連
+// =====================================================
+function getAllTasks() {
+  const tasks = [];
+  WEEKS.forEach((week, wIdx) => {
+    week.days.forEach((day, dIdx) => {
+      tasks.push({
+        ...day,
+        weekIdx: wIdx,
+        dayIdx: dIdx,
+        dayKey: `${wIdx}_${dIdx}`,
+        weekLabel: week.label,
+        weekTheme: week.theme,
+      });
+    });
+  });
+  return tasks;
+}
+
+function computeSchedule() {
+  const tasks = getAllTasks();
+  const start = new Date(state.startDate + 'T00:00:00');
+  start.setHours(0,0,0,0);
+  const today = todayDate();
+  let cursor = new Date(start);
+  let firstPendingHandled = false;
+
+  return tasks.map(task => {
+    const p = state.progress[task.dayKey];
+    if (p && p.done && p.updatedAt) {
+      const actual = new Date(p.updatedAt);
+      actual.setHours(0,0,0,0);
+      cursor = addDays(actual, 1);
+      return { ...task, plannedDate: actual, status: 'done', note: p.note || '', updatedAt: p.updatedAt };
+    } else {
+      if (!firstPendingHandled) {
+        if (cursor < today) cursor = new Date(today);
+        firstPendingHandled = true;
+      }
+      const planned = new Date(cursor);
+      cursor = addDays(cursor, 1);
+      return { ...task, plannedDate: planned, status: 'pending', note: (p && p.note) || '', updatedAt: p ? p.updatedAt : null };
+    }
+  });
+}
+
+function findTodayTask(schedule) {
+  // 最初の未完了タスクを「今日のタスク」とする
+  return schedule.find(t => t.status === 'pending');
+}
+
+// =====================================================
+// 統計
+// =====================================================
+function computeStats(schedule) {
+  const studyTasks = schedule.filter(t => !t.rest);
+  const doneStudyTasks = studyTasks.filter(t => t.status === 'done');
+  const doneCount = doneStudyTasks.length;
+  const totalCount = studyTasks.length;
+  const percent = totalCount === 0 ? 0 : Math.round(doneCount / totalCount * 100);
+
+  // ストリーク：先頭から連続で完了している学習タスク数（rest日はスキップ）
+  let streak = 0;
+  for (const t of schedule) {
+    if (t.rest) continue;
+    if (t.status === 'done') streak++;
+    else break;
+  }
+
+  const totalMins = doneStudyTasks.reduce((sum, t) => sum + (t.mins || 0), 0);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+
+  return { doneCount, totalCount, percent, streak, totalMins, hours, mins };
+}
+
+// =====================================================
+// Google Identity Services / OAuth
+// =====================================================
+function waitForGis() {
+  return new Promise((resolve, reject) => {
+    if (window.google && google.accounts && google.accounts.oauth2) return resolve();
+    let tries = 0;
+    const iv = setInterval(() => {
+      if (window.google && google.accounts && google.accounts.oauth2) {
+        clearInterval(iv);
+        resolve();
+      } else if (++tries > 50) {
+        clearInterval(iv);
+        reject(new Error('GIS load timeout'));
+      }
+    }, 100);
+  });
+}
+
+async function initGis() {
+  await waitForGis();
+  state.tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: state.clientId,
+    scope: SCOPES,
+    callback: (resp) => {
+      const resolvers = state.tokenResolvers.slice();
+      state.tokenResolvers = [];
+      if (resp.error) {
+        showError('サインインに失敗: ' + resp.error);
+        resolvers.forEach(({ reject }) => reject(new Error(resp.error)));
+        return;
+      }
+      state.token = resp.access_token;
+      state.tokenExpiresAt = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+      resolvers.forEach(({ resolve }) => resolve(state.token));
+      // 初回サインイン直後だけのフロー
+      if (!state._signedInOnce) {
+        state._signedInOnce = true;
+        onSignedIn();
+      }
+    }
+  });
+}
+
+function ensureToken() {
+  return new Promise((resolve, reject) => {
+    if (state.token && Date.now() < state.tokenExpiresAt) {
+      return resolve(state.token);
+    }
+    if (!state.tokenClient) return reject(new Error('Token client not initialized'));
+    state.tokenResolvers.push({ resolve, reject });
+    state.tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+function requestSignInInteractive() {
+  if (!state.tokenClient) {
+    showError('Google認証が初期化されていません。リロードしてください。');
+    return;
+  }
+  state.tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+// =====================================================
+// Google Sheets API
+// =====================================================
+async function sheetsRequest(method, path, body) {
+  const token = await ensureToken();
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${state.spreadsheetId}${path}`;
+  const opts = {
+    method,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const resp = await fetch(url, opts);
+  if (!resp.ok) {
+    const text = await resp.text();
+    if (resp.status === 401) {
+      // トークン期限切れ、強制再取得
+      state.token = null;
+      state.tokenExpiresAt = 0;
+    }
+    throw new Error(`Sheets API ${resp.status}: ${text.slice(0, 200)}`);
+  }
+  return resp.json();
+}
+const sheetsGet = (range) => sheetsRequest('GET', `/values/${encodeURIComponent(range)}`);
+const sheetsUpdate = (range, values) => sheetsRequest('PUT', `/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { values });
+
+// =====================================================
+// シート初期化（progress / meta が無ければ作る）
+// =====================================================
+async function ensureSheets() {
+  const meta = await sheetsRequest('GET', '');
+  const titles = (meta.sheets || []).map(s => s.properties.title);
+  const requests = [];
+  if (!titles.includes('progress')) requests.push({ addSheet: { properties: { title: 'progress' } } });
+  if (!titles.includes('meta')) requests.push({ addSheet: { properties: { title: 'meta' } } });
+  if (requests.length > 0) {
+    await sheetsRequest('POST', ':batchUpdate', { requests });
+  }
+  // ヘッダー行を確認・書き込み（既存があっても上書きする：構造を保証）
+  if (!titles.includes('progress')) {
+    await sheetsUpdate('progress!A1:D1', [['dayKey','done','note','updatedAt']]);
+  }
+  if (!titles.includes('meta')) {
+    await sheetsUpdate('meta!A1:B1', [['startDate', state.startDate]]);
+  }
+}
+
+// =====================================================
+// シートからの読み込み
+// =====================================================
+async function loadFromSheets() {
+  // progress
+  try {
+    const data = await sheetsGet('progress!A2:D');
+    const next = {};
+    (data.values || []).forEach(row => {
+      if (row[0]) {
+        next[row[0]] = {
+          done: String(row[1]).toUpperCase() === 'TRUE',
+          note: row[2] || '',
+          updatedAt: row[3] || null,
+        };
+      }
+    });
+    // ローカル変更をマージ：pending dayKey はローカルを優先
+    const pendingSet = new Set(state.pending);
+    Object.keys(state.progress).forEach(k => {
+      if (pendingSet.has(k)) next[k] = state.progress[k];
+    });
+    state.progress = next;
+  } catch (e) {
+    console.error('progress読み込み失敗:', e);
+    throw e;
+  }
+  // meta
+  try {
+    const data = await sheetsGet('meta!A:B');
+    let foundStart = false;
+    (data.values || []).forEach(row => {
+      if (row[0] === 'startDate' && row[1]) {
+        foundStart = true;
+        // Sheets側にあればそれを正とする（マルチデバイス整合性）
+        if (state.startDate !== row[1]) {
+          state.startDate = row[1];
+          localStorage.setItem(SK.START_DATE, state.startDate);
+        }
+      }
+    });
+    if (!foundStart) {
+      // 初回：localStorageの値をSheetsに書く
+      await sheetsUpdate('meta!A1:B1', [['startDate', state.startDate]]);
+    }
+  } catch (e) {
+    console.warn('meta読み込み失敗:', e);
+  }
+  saveCache();
+}
+
+// =====================================================
+// 個別レコードの保存
+// =====================================================
+async function saveDayKey(dayKey) {
+  const allTasks = getAllTasks();
+  const idx = allTasks.findIndex(t => t.dayKey === dayKey);
+  if (idx === -1) return;
+  const rowNum = idx + 2; // ヘッダー1行
+  const p = state.progress[dayKey] || {};
+  const row = [[dayKey, p.done ? 'TRUE' : 'FALSE', p.note || '', p.updatedAt || '']];
+  await sheetsUpdate(`progress!A${rowNum}:D${rowNum}`, row);
+}
+
+// =====================================================
+// オフライン同期キュー
+// =====================================================
+function queuePending(dayKey) {
+  if (!state.pending.includes(dayKey)) state.pending.push(dayKey);
+  saveCache();
+}
+async function flushPending() {
+  if (state.pending.length === 0) return;
+  if (!state.online) return;
+  const queue = state.pending.slice();
+  state.pending = [];
+  saveCache();
+  for (const dayKey of queue) {
+    try { await saveDayKey(dayKey); }
+    catch (e) {
+      console.error('同期失敗:', dayKey, e);
+      state.pending.push(dayKey);
+    }
+  }
+  saveCache();
+}
+
+// =====================================================
+// レンダリング
+// =====================================================
+function render() {
+  const schedule = computeSchedule();
+  renderDashboard(schedule);
+  renderToday(schedule);
+  renderWeek(schedule);
+}
+
+function renderDashboard(schedule) {
+  const s = computeStats(schedule);
+  $('#stat-done').textContent = `${s.doneCount} / ${s.totalCount}`;
+  $('#stat-percent').textContent = `${s.percent}%`;
+  $('#stat-streak').textContent = String(s.streak);
+  $('#stat-time').textContent = `${s.hours}h ${s.mins}m`;
+  $('#progress-fill').style.width = `${s.percent}%`;
+}
+
+function renderToday(schedule) {
+  const today = findTodayTask(schedule);
+  const c = $('#today-container');
+  c.innerHTML = '';
+  if (!today) {
+    c.innerHTML = `<div class="today-card">
+      <span class="today-label">🎉 完了</span>
+      <div class="today-task">すべてのタスクが完了しました！おつかれさまでした！</div>
+    </div>`;
+    return;
+  }
+  const card = document.createElement('div');
+  card.className = 'today-card';
+  card.innerHTML = `
+    <span class="today-label">⭐ 今日のタスク</span>
+    <div class="today-meta">予定 ${fmtDate(today.plannedDate)} ・ ${escapeHtml(today.weekLabel)} Day ${today.dayIdx+1}</div>
+    <div class="today-task">${escapeHtml(today.task)}</div>
+    <div class="today-mins">${today.rest ? '休憩日' : `所要 ${today.mins} 分`}</div>
+    <div style="margin-top:12px"><button data-goto>この週を表示</button></div>
+  `;
+  c.appendChild(card);
+  card.querySelector('[data-goto]').addEventListener('click', () => {
+    state.currentWeek = today.weekIdx;
+    saveSettings();
+    render();
+    $('#week-label').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+}
+
+function renderWeek(schedule) {
+  const wIdx = state.currentWeek;
+  const week = WEEKS[wIdx];
+  $('#week-label').textContent = week.label;
+  $('#week-theme').textContent = week.theme;
+  $('#prev-week').disabled = wIdx === 0;
+  $('#next-week').disabled = wIdx === WEEKS.length - 1;
+
+  const today = findTodayTask(schedule);
+  const todayKey = today ? today.dayKey : null;
+  const container = $('#day-cards');
+  container.innerHTML = '';
+  const weekTasks = schedule.filter(t => t.weekIdx === wIdx);
+  weekTasks.forEach(t => {
+    const cls = ['day-card'];
+    if (t.status === 'done') cls.push('done');
+    if (t.rest) cls.push('rest');
+    if (t.dayKey === todayKey) cls.push('today');
+    const card = document.createElement('div');
+    card.className = cls.join(' ');
+    card.innerHTML = `
+      <div class="day-head">
+        <div class="day-date">${fmtDate(t.plannedDate)} ・ Day ${t.dayIdx+1}</div>
+        <div class="day-mins">${t.rest ? '休憩' : t.mins + '分'}</div>
+      </div>
+      <div class="day-task">${escapeHtml(t.task)}</div>
+      <div class="day-actions">
+        <button class="${t.status === 'done' ? 'secondary' : ''}" data-toggle>
+          ${t.status === 'done' ? '✓ 完了済み（取り消す）' : (t.rest ? '✓ 確認済みにする' : '完了にする')}
+        </button>
+      </div>
+      <textarea class="note-input" placeholder="メモ...">${escapeHtml(t.note || '')}</textarea>
+    `;
+    container.appendChild(card);
+    card.querySelector('[data-toggle]').addEventListener('click', () => toggleDone(t.dayKey));
+    const noteEl = card.querySelector('textarea');
+    let timer;
+    noteEl.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => updateNote(t.dayKey, noteEl.value), 800);
+    });
+  });
+}
+
+// =====================================================
+// 操作
+// =====================================================
+async function toggleDone(dayKey) {
+  const cur = state.progress[dayKey] || { done: false, note: '', updatedAt: null };
+  const newDone = !cur.done;
+  state.progress[dayKey] = {
+    done: newDone,
+    note: cur.note || '',
+    updatedAt: newDone ? new Date().toISOString() : (cur.updatedAt || ''),
+  };
+  saveCache();
+  render();
+  try {
+    if (state.online) await saveDayKey(dayKey);
+    else queuePending(dayKey);
+  } catch (e) {
+    console.error(e);
+    queuePending(dayKey);
+    showError('保存失敗（ローカル保持→次回再接続時に同期）');
+  }
+}
+
+async function updateNote(dayKey, value) {
+  const cur = state.progress[dayKey] || { done: false, note: '', updatedAt: null };
+  state.progress[dayKey] = {
+    done: cur.done,
+    note: value,
+    updatedAt: cur.updatedAt || new Date().toISOString(),
+  };
+  saveCache();
+  try {
+    if (state.online) await saveDayKey(dayKey);
+    else queuePending(dayKey);
+  } catch (e) {
+    console.error(e);
+    queuePending(dayKey);
+  }
+}
+
+// =====================================================
+// イベント設定
+// =====================================================
+function wireEvents() {
+  $('#prev-week').addEventListener('click', () => {
+    if (state.currentWeek > 0) { state.currentWeek--; saveSettings(); render(); }
+  });
+  $('#next-week').addEventListener('click', () => {
+    if (state.currentWeek < WEEKS.length - 1) { state.currentWeek++; saveSettings(); render(); }
+  });
+  $('#reset-btn').addEventListener('click', resetSettings);
+  $('#signin-reset-btn').addEventListener('click', resetSettings);
+  $('#sync-btn').addEventListener('click', async () => {
+    const btn = $('#sync-btn');
+    btn.disabled = true;
+    btn.textContent = '同期中...';
+    try {
+      await flushPending();
+      await loadFromSheets();
+      render();
+    } catch (e) {
+      showError('同期失敗: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '↻ 同期';
+    }
+  });
+  $('#signin-btn').addEventListener('click', requestSignInInteractive);
+  $('#setup-save').addEventListener('click', () => {
+    const cid = $('#setup-client-id').value.trim();
+    const sid = $('#setup-sheet-id').value.trim();
+    const sd = $('#setup-start-date').value;
+    if (!cid || !sid || !sd) { alert('すべての項目を入力してください'); return; }
+    if (!/\.apps\.googleusercontent\.com$/.test(cid)) {
+      if (!confirm('クライアントIDの形式が想定と異なります。続行しますか？')) return;
+    }
+    state.clientId = cid;
+    state.spreadsheetId = sid;
+    state.startDate = sd;
+    saveSettings();
+    bootstrap();
+  });
+  window.addEventListener('online', () => {
+    state.online = true;
+    $('#offline-banner').classList.add('hidden');
+    flushPending().then(render).catch(console.error);
+  });
+  window.addEventListener('offline', () => {
+    state.online = false;
+    $('#offline-banner').classList.remove('hidden');
+  });
+}
+
+// =====================================================
+// 画面切り替え
+// =====================================================
+function showOnly(id) {
+  ['setup-screen','loading-screen','signin-screen','main-app'].forEach(x => {
+    document.getElementById(x).classList.toggle('hidden', x !== id);
+  });
+}
+
+// =====================================================
+// 起動シーケンス
+// =====================================================
+async function bootstrap() {
+  loadSettings();
+  if (!state.clientId || !state.spreadsheetId || !state.startDate) {
+    showOnly('setup-screen');
+    if (state.startDate) $('#setup-start-date').value = state.startDate;
+    if (state.clientId) $('#setup-client-id').value = state.clientId;
+    if (state.spreadsheetId) $('#setup-sheet-id').value = state.spreadsheetId;
+    return;
+  }
+  showOnly('loading-screen');
+  $('#loading-text').textContent = 'Google認証を初期化中...';
+  try {
+    await initGis();
+  } catch (e) {
+    showError('Google認証初期化失敗: ' + e.message);
+    showOnly('setup-screen');
+    return;
+  }
+  showOnly('signin-screen');
+}
+
+async function onSignedIn() {
+  showOnly('loading-screen');
+  $('#loading-text').textContent = 'シートを準備中...';
+  try {
+    await ensureSheets();
+    $('#loading-text').textContent = 'データを読み込み中...';
+    await loadFromSheets();
+    await flushPending();
+  } catch (e) {
+    showError('シート操作失敗: ' + e.message);
+    // キャッシュで継続
+  }
+  showOnly('main-app');
+  if (!state.online) $('#offline-banner').classList.remove('hidden');
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  wireEvents();
+  // 既定の開始日を今日に
+  $('#setup-start-date').value = new Date().toISOString().slice(0,10);
+  bootstrap();
+});
+</script>
+</body>
+</html>
