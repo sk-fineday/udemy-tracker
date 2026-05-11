@@ -267,6 +267,50 @@ textarea { font-size: 14px; }
 .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .button-row button { flex: 1; }
 
+/* タブバー */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.tab {
+  flex: 1;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 12px;
+  min-height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab.active {
+  background: var(--primary);
+  color: white;
+}
+.tab:hover:not(.active) {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* 未設定コースのプレースホルダー */
+.empty-course {
+  text-align: center;
+  padding: 48px 20px;
+  background: var(--surface);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.empty-course p { color: var(--text-muted); margin: 0 0 8px; }
+.empty-icon { font-size: 2rem; margin-bottom: 12px; }
+
 /* ローディング */
 .loading {
   text-align: center;
