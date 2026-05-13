@@ -114,6 +114,7 @@ textarea { font-size: 14px; }
   .dashboard-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .stat-end-date { grid-column: 1 / -1; }
+.stat-initial-end-date { grid-column: 1 / -1; }
 .stat {
   text-align: center;
   padding: 10px 8px;

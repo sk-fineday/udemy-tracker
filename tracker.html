@@ -106,6 +106,10 @@
             <div class="stat-value" id="stat-end-date">—</div>
             <div class="stat-label">全日程終了予定日</div>
           </div>
+          <div class="stat stat-initial-end-date">
+            <div class="stat-value" id="stat-initial-end-date">—</div>
+            <div class="stat-label">当初の終了予定日</div>
+          </div>
         </div>
         <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
       </div>
@@ -140,6 +144,7 @@
 const COURSES = [
   {
     label: "Web Developer Bootcamp",
+    initialEndDate: "2026-08-21",
     weeks: [
       {label:"Week 1", theme:"HTML完成 ＋ CSS入門〜セレクタ", days:[
         {task:"#39〜41 テーブルtr/td/th・thead/tfoot・colspan", mins:23, rest:false},
@@ -269,13 +274,14 @@ const COURSES = [
       ]},
     ],
   },
-  { label: "コース2", weeks: [] },
-  { label: "コース3", weeks: [] },
+  { label: "コース2", initialEndDate: null, weeks: [] },
+  { label: "コース3", initialEndDate: null, weeks: [] },
 ];
 
 // コースごとのシート名・metaキー
 const PROGRESS_SHEETS = ['progress', 'progress_c1', 'progress_c2'];
 const META_KEYS = ['startDate', 'startDate_c1', 'startDate_c2'];
+const INITIAL_END_DATE_KEYS = ['initialEndDate', 'initialEndDate_c1', 'initialEndDate_c2'];
 
 // =====================================================
 // 定数
@@ -285,6 +291,7 @@ const SK = {
   SPREADSHEET_ID: 'udemy_tracker_spreadsheet_id',
   ACTIVE_COURSE:  'udemy_tracker_active_course',
   startDate:    (i) => `udemy_tracker_start_date_c${i}`,
+  initialEndDate:(i) => `udemy_tracker_initial_end_date_c${i}`,
   progressCache:(i) => `udemy_tracker_progress_c${i}`,
   pending:      (i) => `udemy_tracker_pending_c${i}`,
   currentWeek:  (i) => `udemy_tracker_current_week_c${i}`,
@@ -299,9 +306,9 @@ const state = {
   spreadsheetId: null,
   activeCourse: 0,
   courses: [
-    { startDate: null, progress: {}, currentWeek: 0, pending: [] },
-    { startDate: null, progress: {}, currentWeek: 0, pending: [] },
-    { startDate: null, progress: {}, currentWeek: 0, pending: [] },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
   ],
   token: null,
   tokenExpiresAt: 0,
@@ -367,8 +374,9 @@ function loadSettings() {
   });
 
   for (let i = 0; i < 3; i++) {
-    state.courses[i].startDate   = localStorage.getItem(SK.startDate(i));
-    state.courses[i].currentWeek = parseInt(localStorage.getItem(SK.currentWeek(i)) || '0', 10) || 0;
+    state.courses[i].startDate      = localStorage.getItem(SK.startDate(i));
+    state.courses[i].initialEndDate = localStorage.getItem(SK.initialEndDate(i));
+    state.courses[i].currentWeek    = parseInt(localStorage.getItem(SK.currentWeek(i)) || '0', 10) || 0;
     try { state.courses[i].progress = JSON.parse(localStorage.getItem(SK.progressCache(i)) || '{}'); }
     catch { state.courses[i].progress = {}; }
     try { state.courses[i].pending  = JSON.parse(localStorage.getItem(SK.pending(i)) || '[]'); }
@@ -383,6 +391,7 @@ function saveSettings() {
   for (let i = 0; i < 3; i++) {
     localStorage.setItem(SK.currentWeek(i), String(state.courses[i].currentWeek));
     if (state.courses[i].startDate) localStorage.setItem(SK.startDate(i), state.courses[i].startDate);
+    if (state.courses[i].initialEndDate) localStorage.setItem(SK.initialEndDate(i), state.courses[i].initialEndDate);
   }
 }
 
@@ -395,7 +404,7 @@ function resetSettings() {
   if (!confirm('設定とローカルキャッシュをすべて消去します。よろしいですか？\n（Sheets上のデータは消えません）')) return;
   [SK.CLIENT_ID, SK.SPREADSHEET_ID, SK.ACTIVE_COURSE].forEach(k => localStorage.removeItem(k));
   for (let i = 0; i < 3; i++) {
-    [SK.startDate(i), SK.progressCache(i), SK.pending(i), SK.currentWeek(i)].forEach(k => localStorage.removeItem(k));
+    [SK.startDate(i), SK.initialEndDate(i), SK.progressCache(i), SK.pending(i), SK.currentWeek(i)].forEach(k => localStorage.removeItem(k));
   }
   location.reload();
 }
@@ -578,22 +587,26 @@ async function ensureSheets() {
 
   // metaシートの初期化・移行
   if (!titles.includes('meta')) {
-    await sheetsUpdate('meta!A1:B4', [
+    await sheetsUpdate('meta!A1:B7', [
       ['key', 'value'],
       [META_KEYS[0], ''],
       [META_KEYS[1], ''],
       [META_KEYS[2], ''],
+      [INITIAL_END_DATE_KEYS[0], ''],
+      [INITIAL_END_DATE_KEYS[1], ''],
+      [INITIAL_END_DATE_KEYS[2], ''],
     ]);
   } else {
-    // 既存metaシートにc1・c2行がなければ追加（旧バージョンからの移行）
+    // 既存metaシートに不足キーを追加（旧バージョンからの移行）
     try {
       const metaData = await sheetsGet('meta!A:A');
       const existingKeys = (metaData.values || []).map(r => r[0] || '');
-      for (let i = 1; i < 3; i++) {
-        if (!existingKeys.includes(META_KEYS[i])) {
+      const requiredKeys = [META_KEYS[1], META_KEYS[2], ...INITIAL_END_DATE_KEYS];
+      for (const key of requiredKeys) {
+        if (!existingKeys.includes(key)) {
           const row = existingKeys.length + 1;
-          await sheetsUpdate(`meta!A${row}:B${row}`, [[META_KEYS[i], '']]);
-          existingKeys.push(META_KEYS[i]);
+          await sheetsUpdate(`meta!A${row}:B${row}`, [[key, '']]);
+          existingKeys.push(key);
         }
       }
     } catch (e) {
@@ -650,6 +663,20 @@ async function loadFromSheets() {
       } else if (state.courses[i].startDate) {
         needSave = true; // ローカルにある開始日をSheetsへ書き込む
       }
+
+      if (metaMap[INITIAL_END_DATE_KEYS[i]]) {
+        if (state.courses[i].initialEndDate !== metaMap[INITIAL_END_DATE_KEYS[i]]) {
+          state.courses[i].initialEndDate = metaMap[INITIAL_END_DATE_KEYS[i]];
+          localStorage.setItem(SK.initialEndDate(i), state.courses[i].initialEndDate);
+        }
+      } else if (state.courses[i].initialEndDate) {
+        needSave = true;
+      } else if (COURSES[i].initialEndDate) {
+        // 既存コースの初回起動：COURSESに定義された固定値をSheetsに書き込む
+        state.courses[i].initialEndDate = COURSES[i].initialEndDate;
+        localStorage.setItem(SK.initialEndDate(i), state.courses[i].initialEndDate);
+        needSave = true;
+      }
     }
     if (needSave) await saveMetaToSheets();
   } catch (e) {
@@ -663,11 +690,14 @@ async function loadFromSheets() {
 // metaシートへの保存
 // =====================================================
 async function saveMetaToSheets() {
-  await sheetsUpdate('meta!A1:B4', [
+  await sheetsUpdate('meta!A1:B7', [
     ['key', 'value'],
     [META_KEYS[0], state.courses[0].startDate || ''],
     [META_KEYS[1], state.courses[1].startDate || ''],
     [META_KEYS[2], state.courses[2].startDate || ''],
+    [INITIAL_END_DATE_KEYS[0], state.courses[0].initialEndDate || ''],
+    [INITIAL_END_DATE_KEYS[1], state.courses[1].initialEndDate || ''],
+    [INITIAL_END_DATE_KEYS[2], state.courses[2].initialEndDate || ''],
   ]);
 }
 
@@ -778,6 +808,14 @@ function renderDashboard(schedule) {
   $('#progress-fill').style.width = `${s.percent}%`;
   const lastTask = schedule[schedule.length - 1];
   $('#stat-end-date').textContent = lastTask ? formatEndDate(lastTask.plannedDate) : '—';
+
+  const initial = state.courses[state.activeCourse].initialEndDate;
+  if (initial) {
+    const d = new Date(initial + 'T00:00:00');
+    $('#stat-initial-end-date').textContent = formatEndDate(d);
+  } else {
+    $('#stat-initial-end-date').textContent = '—';
+  }
 }
 
 function renderToday(schedule) {
@@ -949,6 +987,26 @@ function wireEvents() {
     const i = state.activeCourse;
     state.courses[i].startDate = date;
     localStorage.setItem(SK.startDate(i), date);
+
+    // 初回のみ：開始日から計算した終了予定日を「当初の終了予定日」として固定保存
+    if (!state.courses[i].initialEndDate) {
+      const hardcoded = COURSES[i].initialEndDate;
+      if (hardcoded) {
+        state.courses[i].initialEndDate = hardcoded;
+      } else {
+        const schedule = computeSchedule(i);
+        const lastTask = schedule[schedule.length - 1];
+        if (lastTask && lastTask.plannedDate) {
+          const d = lastTask.plannedDate;
+          const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          state.courses[i].initialEndDate = ymd;
+        }
+      }
+      if (state.courses[i].initialEndDate) {
+        localStorage.setItem(SK.initialEndDate(i), state.courses[i].initialEndDate);
+      }
+    }
+
     saveSettings();
     render();
     if (state.online) {
