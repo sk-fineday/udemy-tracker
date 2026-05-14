@@ -8,8 +8,8 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Udemy 学習トラッカー</title>
-<!-- CSS変更時は ?v= の値を更新（例: 20260514 → 20260515） -->
-<link rel="stylesheet" href="tracker.css?v=20260514">
+<!-- CSS変更時は ?v= の値を更新（例: 20260515 → 20260516） -->
+<link rel="stylesheet" href="tracker.css?v=20260515">
 </head>
 <body>
 <div id="app">
@@ -58,6 +58,7 @@
       <h1>📚 Udemy 学習トラッカー</h1>
       <div class="header-actions">
         <button class="secondary" id="sync-btn" title="再同期">↻ 同期</button>
+        <button class="secondary" id="history-btn">📋 履歴</button>
         <button class="secondary" id="reset-btn">設定リセット</button>
       </div>
     </div>
@@ -134,6 +135,16 @@
 
     <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0">
       Udemy 学習トラッカー
+    </div>
+  </div>
+
+  <div id="history-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📋 学習履歴</h2>
+        <button class="secondary" id="history-close">閉じる</button>
+      </div>
+      <div class="modal-body" id="history-body"></div>
     </div>
   </div>
 </div>
@@ -300,6 +311,7 @@ const COURSES = [
 const PROGRESS_SHEETS = ['progress', 'progress_c1', 'progress_c2'];
 const META_KEYS = ['startDate', 'startDate_c1', 'startDate_c2'];
 const INITIAL_END_DATE_KEYS = ['initialEndDate', 'initialEndDate_c1', 'initialEndDate_c2'];
+const HISTORY_SHEET = 'history';
 
 // =====================================================
 // 定数
@@ -324,10 +336,11 @@ const state = {
   spreadsheetId: null,
   activeCourse: 0,
   courses: [
-    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
-    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
-    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [] },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [], weekManual: false },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [], weekManual: false },
+    { startDate: null, initialEndDate: null, progress: {}, currentWeek: 0, pending: [], weekManual: false },
   ],
+  history: [],
   token: null,
   tokenExpiresAt: 0,
   tokenClient: null,
@@ -382,7 +395,6 @@ function loadSettings() {
     ['udemy_tracker_start_date',   SK.startDate(0)],
     ['udemy_tracker_progress',     SK.progressCache(0)],
     ['udemy_tracker_pending',      SK.pending(0)],
-    ['udemy_tracker_current_week', SK.currentWeek(0)],
   ].forEach(([oldKey, newKey]) => {
     const val = localStorage.getItem(oldKey);
     if (val !== null) {
@@ -390,11 +402,15 @@ function loadSettings() {
       localStorage.removeItem(oldKey);
     }
   });
+  // currentWeekは永続化を廃止（タブ切替・リロード時は「次に取り組む週」へ自動移動）
+  localStorage.removeItem('udemy_tracker_current_week');
+  for (let i = 0; i < 3; i++) localStorage.removeItem(SK.currentWeek(i));
 
   for (let i = 0; i < 3; i++) {
     state.courses[i].startDate      = localStorage.getItem(SK.startDate(i));
     state.courses[i].initialEndDate = localStorage.getItem(SK.initialEndDate(i));
-    state.courses[i].currentWeek    = parseInt(localStorage.getItem(SK.currentWeek(i)) || '0', 10) || 0;
+    state.courses[i].currentWeek    = 0;
+    state.courses[i].weekManual     = false;
     try { state.courses[i].progress = JSON.parse(localStorage.getItem(SK.progressCache(i)) || '{}'); }
     catch { state.courses[i].progress = {}; }
     try { state.courses[i].pending  = JSON.parse(localStorage.getItem(SK.pending(i)) || '[]'); }
@@ -407,7 +423,6 @@ function saveSettings() {
   localStorage.setItem(SK.SPREADSHEET_ID, state.spreadsheetId || '');
   localStorage.setItem(SK.ACTIVE_COURSE,  String(state.activeCourse));
   for (let i = 0; i < 3; i++) {
-    localStorage.setItem(SK.currentWeek(i), String(state.courses[i].currentWeek));
     if (state.courses[i].startDate) localStorage.setItem(SK.startDate(i), state.courses[i].startDate);
     if (state.courses[i].initialEndDate) localStorage.setItem(SK.initialEndDate(i), state.courses[i].initialEndDate);
   }
@@ -489,18 +504,40 @@ function computeStats(schedule) {
   const totalCount = studyTasks.length;
   const percent = totalCount === 0 ? 0 : Math.round(doneCount / totalCount * 100);
 
-  let streak = 0;
-  for (const t of schedule) {
-    if (t.rest) continue;
-    if (t.status === 'done') streak++;
-    else break;
-  }
-
   const totalMins = doneStudyTasks.reduce((sum, t) => sum + (t.mins || 0), 0);
   const hours = Math.floor(totalMins / 60);
   const mins  = totalMins % 60;
 
-  return { doneCount, totalCount, percent, streak, totalMins, hours, mins };
+  return { doneCount, totalCount, percent, totalMins, hours, mins };
+}
+
+// 実際に学習した日（updatedAtの日付）の連続日数。休憩日も含む。
+// 起点は「今日」、なければ「昨日」。どちらも未学習なら0。
+function computeStreak(courseIdx = state.activeCourse) {
+  const progress = state.courses[courseIdx].progress;
+  const dateSet = new Set();
+  Object.values(progress).forEach(p => {
+    if (!p || !p.done || !p.updatedAt) return;
+    const d = new Date(p.updatedAt);
+    if (isNaN(d.getTime())) return;
+    d.setHours(0,0,0,0);
+    dateSet.add(d.getTime());
+  });
+  if (dateSet.size === 0) return 0;
+
+  const today = todayDate();
+  const yesterday = addDays(today, -1);
+  let cursor;
+  if (dateSet.has(today.getTime())) cursor = today;
+  else if (dateSet.has(yesterday.getTime())) cursor = yesterday;
+  else return 0;
+
+  let streak = 0;
+  while (dateSet.has(cursor.getTime())) {
+    streak++;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
 }
 
 // =====================================================
@@ -591,7 +628,7 @@ async function ensureSheets() {
   const titles = (spreadsheet.sheets || []).map(s => s.properties.title);
   const addRequests = [];
 
-  for (const name of [...PROGRESS_SHEETS, 'meta']) {
+  for (const name of [...PROGRESS_SHEETS, 'meta', HISTORY_SHEET]) {
     if (!titles.includes(name)) addRequests.push({ addSheet: { properties: { title: name } } });
   }
   if (addRequests.length > 0) await sheetsRequest('POST', ':batchUpdate', { requests: addRequests });
@@ -601,6 +638,11 @@ async function ensureSheets() {
     if (!titles.includes(PROGRESS_SHEETS[i])) {
       await sheetsUpdate(`${PROGRESS_SHEETS[i]}!A1:D1`, [['dayKey', 'done', 'note', 'updatedAt']]);
     }
+  }
+
+  // 新規historyシートにヘッダーを書き込む
+  if (!titles.includes(HISTORY_SHEET)) {
+    await sheetsUpdate(`${HISTORY_SHEET}!A1:E1`, [['id', 'courseIdx', 'courseLabel', 'startDate', 'endDate']]);
   }
 
   // metaシートの初期化・移行
@@ -701,7 +743,90 @@ async function loadFromSheets() {
     console.warn('meta読み込み失敗:', e);
   }
 
+  // 学習履歴を読み込む
+  try {
+    const data = await sheetsGet(`${HISTORY_SHEET}!A2:E`);
+    state.history = (data.values || []).map(row => ({
+      id:          row[0] || '',
+      courseIdx:   parseInt(row[1] || '0', 10) || 0,
+      courseLabel: row[2] || '',
+      startDate:   row[3] || '',
+      endDate:     row[4] || '',
+    })).filter(h => h.id);
+  } catch (e) {
+    console.warn('history読み込み失敗:', e);
+    state.history = [];
+  }
+
   for (let i = 0; i < 3; i++) saveCache(i);
+}
+
+// =====================================================
+// 学習履歴
+// =====================================================
+async function saveHistoryRow(entry) {
+  const idx = state.history.findIndex(h => h.id === entry.id);
+  const rowNum = (idx === -1 ? state.history.length + 1 : idx + 1) + 1; // +1はヘッダー行
+  const row = [[entry.id, String(entry.courseIdx), entry.courseLabel, entry.startDate, entry.endDate || '']];
+  await sheetsUpdate(`${HISTORY_SHEET}!A${rowNum}:E${rowNum}`, row);
+}
+
+async function appendHistoryEntry(courseIdx, startDate) {
+  const entry = {
+    id: String(Date.now()),
+    courseIdx,
+    courseLabel: COURSES[courseIdx].label,
+    startDate,
+    endDate: '',
+  };
+  state.history.push(entry);
+  if (state.online) {
+    try { await saveHistoryRow(entry); }
+    catch (e) { console.warn('履歴保存失敗:', e); }
+  }
+  return entry;
+}
+
+function findActiveHistoryEntry(courseIdx) {
+  // endDate未設定のうち最新のものを返す
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const h = state.history[i];
+    if (h.courseIdx === courseIdx && !h.endDate) return h;
+  }
+  return null;
+}
+
+async function syncCourseCompletion(courseIdx) {
+  const tasks = getAllTasks(courseIdx);
+  const studyTasks = tasks.filter(t => !t.rest);
+  if (studyTasks.length === 0) return;
+  const progress = state.courses[courseIdx].progress;
+  const allDone = studyTasks.every(t => progress[t.dayKey] && progress[t.dayKey].done);
+  const entry = findActiveHistoryEntry(courseIdx);
+
+  if (allDone) {
+    // 最終学習日 = doneタスクの updatedAt 最大値（日付部分）
+    let maxTs = 0;
+    Object.values(progress).forEach(p => {
+      if (p && p.done && p.updatedAt) {
+        const t = new Date(p.updatedAt).getTime();
+        if (!isNaN(t) && t > maxTs) maxTs = t;
+      }
+    });
+    if (maxTs === 0) return;
+    const d = new Date(maxTs);
+    const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (entry && entry.endDate !== ymd) {
+      entry.endDate = ymd;
+      try { if (state.online) await saveHistoryRow(entry); }
+      catch (e) { console.warn('履歴endDate保存失敗:', e); }
+    }
+  } else if (entry && entry.endDate) {
+    // 完了取消により未完了に戻った
+    entry.endDate = '';
+    try { if (state.online) await saveHistoryRow(entry); }
+    catch (e) { console.warn('履歴endDateクリア失敗:', e); }
+  }
 }
 
 // =====================================================
@@ -789,6 +914,14 @@ function render() {
   mainContent.classList.remove('hidden');
 
   const schedule = computeSchedule(i);
+
+  // weekManualがfalseなら「次に取り組むタスクの週」を表示
+  if (!state.courses[i].weekManual) {
+    const next = findTodayTask(schedule);
+    if (next) state.courses[i].currentWeek = next.weekIdx;
+    else state.courses[i].currentWeek = COURSES[i].weeks.length - 1;
+  }
+
   renderDashboard(schedule);
   renderToday(schedule);
   renderWeek(schedule);
@@ -804,6 +937,7 @@ function renderTabs() {
     btn.addEventListener('click', () => {
       if (i === state.activeCourse) return;
       state.activeCourse = i;
+      state.courses[i].weekManual = false;
       saveSettings();
       render();
     });
@@ -821,7 +955,7 @@ function renderDashboard(schedule) {
   const s = computeStats(schedule);
   $('#stat-done').textContent    = `${s.doneCount} / ${s.totalCount}`;
   $('#stat-percent').textContent = `${s.percent}%`;
-  $('#stat-streak').textContent  = String(s.streak);
+  $('#stat-streak').textContent  = String(computeStreak(state.activeCourse));
   $('#stat-time').textContent    = `${s.hours}h ${s.mins}m`;
   $('#progress-fill').style.width = `${s.percent}%`;
   const lastTask = schedule[schedule.length - 1];
@@ -860,10 +994,53 @@ function renderToday(schedule) {
   card.querySelector('[data-goto]').addEventListener('click', () => {
     const i = state.activeCourse;
     state.courses[i].currentWeek = today.weekIdx;
-    saveSettings();
+    state.courses[i].weekManual = true;
     render();
     $('#week-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+}
+
+function renderHistoryModal() {
+  const body = $('#history-body');
+  body.innerHTML = '';
+  if (state.history.length === 0) {
+    body.innerHTML = '<p class="help" style="text-align:center;padding:24px 0">学習履歴はまだありません。</p>';
+    return;
+  }
+  const sorted = state.history.slice().sort((a, b) => {
+    if (a.startDate !== b.startDate) return b.startDate.localeCompare(a.startDate);
+    return String(b.id).localeCompare(String(a.id));
+  });
+  const fmt = (ymd) => {
+    if (!ymd) return '';
+    const d = new Date(ymd + 'T00:00:00');
+    if (isNaN(d.getTime())) return ymd;
+    const days = ['日','月','火','水','木','金','土'];
+    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${days[d.getDay()]})`;
+  };
+  const rows = sorted.map(h => `
+    <tr>
+      <td>${escapeHtml(h.courseLabel)}</td>
+      <td>${escapeHtml(fmt(h.startDate))}</td>
+      <td>${h.endDate ? escapeHtml(fmt(h.endDate)) : '<span class="history-active">学習中</span>'}</td>
+    </tr>
+  `).join('');
+  body.innerHTML = `
+    <table class="history-table">
+      <thead>
+        <tr><th>コース</th><th>学習開始日</th><th>学習終了日</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function openHistoryModal() {
+  renderHistoryModal();
+  $('#history-modal').classList.remove('hidden');
+}
+function closeHistoryModal() {
+  $('#history-modal').classList.add('hidden');
 }
 
 function renderWeek(schedule) {
@@ -933,6 +1110,8 @@ async function toggleDone(dayKey) {
     queuePending(dayKey, i);
     showError('保存失敗（ローカル保持→次回再接続時に同期）');
   }
+  try { await syncCourseCompletion(i); }
+  catch (e) { console.warn('履歴同期失敗:', e); }
 }
 
 async function updateNote(dayKey, value) {
@@ -959,11 +1138,19 @@ async function updateNote(dayKey, value) {
 function wireEvents() {
   $('#prev-week').addEventListener('click', () => {
     const i = state.activeCourse;
-    if (state.courses[i].currentWeek > 0) { state.courses[i].currentWeek--; saveSettings(); render(); }
+    if (state.courses[i].currentWeek > 0) {
+      state.courses[i].currentWeek--;
+      state.courses[i].weekManual = true;
+      render();
+    }
   });
   $('#next-week').addEventListener('click', () => {
     const i = state.activeCourse;
-    if (state.courses[i].currentWeek < COURSES[i].weeks.length - 1) { state.courses[i].currentWeek++; saveSettings(); render(); }
+    if (state.courses[i].currentWeek < COURSES[i].weeks.length - 1) {
+      state.courses[i].currentWeek++;
+      state.courses[i].weekManual = true;
+      render();
+    }
   });
   $('#reset-btn').addEventListener('click', resetSettings);
   $('#signin-reset-btn').addEventListener('click', resetSettings);
@@ -986,6 +1173,12 @@ function wireEvents() {
 
   $('#signin-btn').addEventListener('click', requestSignInInteractive);
 
+  $('#history-btn').addEventListener('click', openHistoryModal);
+  $('#history-close').addEventListener('click', closeHistoryModal);
+  $('#history-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'history-modal') closeHistoryModal();
+  });
+
   $('#setup-save').addEventListener('click', () => {
     const cid = $('#setup-client-id').value.trim();
     const sid = $('#setup-sheet-id').value.trim();
@@ -1005,6 +1198,9 @@ function wireEvents() {
     const i = state.activeCourse;
     state.courses[i].startDate = date;
     localStorage.setItem(SK.startDate(i), date);
+
+    // 学習履歴に新しいエントリを追加（再受講ごとに新規）
+    await appendHistoryEntry(i, date);
 
     // 初回のみ：開始日から計算した終了予定日を「当初の終了予定日」として固定保存
     if (!state.courses[i].initialEndDate) {
