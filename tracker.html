@@ -787,6 +787,20 @@ async function appendHistoryEntry(courseIdx, startDate) {
   return entry;
 }
 
+// 既に開始日が設定済みのコースに対応する進行中エントリがなければ補完追加。
+// 同じ startDate で endDate が空のエントリが既にあれば何もしない。
+async function ensureActiveHistoryEntry(courseIdx) {
+  const course = state.courses[courseIdx];
+  if (!course.startDate) return null;
+  const existing = state.history.find(h =>
+    h.courseIdx === courseIdx &&
+    h.startDate === course.startDate &&
+    !h.endDate
+  );
+  if (existing) return existing;
+  return await appendHistoryEntry(courseIdx, course.startDate);
+}
+
 function findActiveHistoryEntry(courseIdx) {
   // endDate未設定のうち最新のものを返す
   for (let i = state.history.length - 1; i >= 0; i--) {
@@ -1280,6 +1294,14 @@ async function onSignedIn() {
     $('#loading-text').textContent = 'データを読み込み中...';
     await loadFromSheets();
     await flushPending();
+    // 既存ユーザー向け：開始日があるのに履歴エントリが無いコースを補完
+    for (let i = 0; i < 3; i++) {
+      if (COURSES[i].weeks.length === 0) continue;
+      try {
+        await ensureActiveHistoryEntry(i);
+        await syncCourseCompletion(i);
+      } catch (e) { console.warn(`コース${i + 1} 履歴補完失敗:`, e); }
+    }
   } catch (e) {
     showError('シート操作失敗: ' + e.message);
   }
