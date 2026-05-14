@@ -274,7 +274,21 @@ const COURSES = [
       ]},
     ],
   },
-  { label: "コース2", initialEndDate: null, weeks: [] },
+  {
+    label: "AI駆動開発入門",
+    initialEndDate: null,
+    weeks: [
+      {label:"Week 1", theme:"AI駆動開発の5領域を体系的に学ぶ", days:[
+        {task:"Sec1: AI駆動開発(AIDD)の全体像（4レクチャー）", mins:10, rest:false},
+        {task:"Sec2: Vibe Codingの正体 〜効用と限界を知る〜（7レクチャー）", mins:33, rest:false},
+        {task:"Sec3: コンテキストエンジニアリング入門（9レクチャー）", mins:38, rest:false},
+        {task:"Sec4: 仕様駆動開発(SDD) 〜Markdown仕様をSSoTにする〜（8レクチャー）", mins:34, rest:false},
+        {task:"Sec5: 生成AI時代のTDD/BDD 〜テスト駆動をAIと協調する〜（8レクチャー）", mins:25, rest:false},
+        {task:"Sec6: AIとDevOps 〜レビューとCIへの組み込み〜（8レクチャー）", mins:20, rest:false},
+        {task:"全体復習・各章のテンプレート/成果物を整理", mins:0, rest:true},
+      ]},
+    ],
+  },
   { label: "コース3", initialEndDate: null, weeks: [] },
 ];
 
